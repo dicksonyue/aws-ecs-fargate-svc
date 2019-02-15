@@ -1,4 +1,4 @@
-##Launch the stack (10 mins)
+## Launch the stack (10 mins)
 -	Launch the Cloudformation template cf.yaml, I tested in us-west-2, it should work in other region, play safe launch in us-west-2
 -	You should find the ALB link in the output
 
