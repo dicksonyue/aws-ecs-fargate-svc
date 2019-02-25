@@ -7,7 +7,7 @@ Parameters:
   SubnetId:
     Type: 'List<AWS::EC2::Subnet::Id>'
     Description: Select at two subnets in your selected VPC.
-    Default: 'subnet-6c50801b,subnet-6712a002,subnet-f9630da2'
+    Default: 'subnet-7f12a01a,subnet-6d50801a'
   ContainerCpu:
     Type: Number
     Description: >-
@@ -33,7 +33,7 @@ Parameters:
   ImgSvc10001:
     Description: Service 10001 Docker Image
     Type: String
-    Default: 'dicksonyue/aws-app-svc-10001:latest'
+    Default: 'dicksonyue/aws-app-svc-10001:v1'
 Resources:
   ECSCluster:
     Type: 'AWS::ECS::Cluster'
