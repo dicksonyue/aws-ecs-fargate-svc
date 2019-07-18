@@ -2,46 +2,47 @@
 -	Launch the Cloudformation template cf.yaml, I tested in us-west-2, it should work in other region, play safe launch in us-west-2
 -	You should find the ALB link in the output
 
-## Config  Jenkins (1 hr)
-1.	Launch a t2.medium ec2
-2.	Bootstrap like here https://d1.awsstatic.com/Projects/P5505030/aws-project_Jenkins-build-server.pdf
-a.	[ec2-user ~]$ sudo yum update –y
-b.	Add the Jenkins repo using the following command:
-[ec2-user ~]$ sudo wget -O /etc/yum.repos.d/jenkins.repo http://pkg.jenkinsci.org/redhat/jenkins.repo
-c.	3Import a key file from Jenkins-CI to enable installation from the package:
-[ec2-user ~]$ sudo rpm --import https://pkg.jenkins.io/redhat/jenkins.io.key
-d.	Install Jenkins:
-[ec2-user ~]$ sudo yum install jenkins -y
-e.	Start Jenkins as a service:
-[ec2-user ~]$ sudo service jenkins start
-3.	Install a few plugin
-a.	CloudBees Docker Build and Publish plugin
-b.	GitHub Authentication plugin
-c.	GitHub Integration Plugin
-d.	GitHub plugin
-e.	Slack Notification Plugin (optional)
-4.	Config
-a.	Follow here Step 7: Configure Jenkins
-http://docs.aws.amazon.com/AWSGettingStartedContinuousDeliveryPipeline/latest/GettingStarted/CICD_Jenkins_Pipeline.html , plus my sreen cap
-./jenkins-config
-                                                              i.      Source Code Management – git
-                                                            ii.      Build trigger – Github hook
-                                                          iii.      Build      
-1.	#!/bin/bash
-2.	DOCKER_LOGIN=`aws ecr get-login --region us-west-2`
-3.	${DOCKER_LOGIN}
-4.	echo $GIT_COMMIT
-                                                           iv.      (ADD)Docker Build and Publish
-1.	Repository Name
-2.	Docker registry URL (create your own ECR under ECS)
-3.	Advanced (click)
-a.	 Build context set “./svc-10001/”
-b.	Repeat this for 10002 and 10003
-                                                             v.      (ADD) Execute shell
-1.	#!/bin/bash
-2.	AWSREGION=us-west-2
-3.	CFFILE=cf.yaml
-4.	CFSTACKNAME=ecsv1
-5.	ImgSvc10001={ecr-url}/aws-voting-app-svc-10001:$GIT_COMMIT
-6.	ImgSvc10002={ecr-url}/aws-voting-app-svc-10002:$GIT_COMMIT
-7.	aws cloudformation update-stack --template-body file://$CFFILE  --parameters ParameterKey=SubnetId,ParameterValue=subnet-6712a002\\,subnet-6c50801b ParameterKey=VpcId,ParameterValue=vpc-953ae1f0 ParameterKey=ImgSvc10001,ParameterValue=$ImgSvc10001 ParameterKey=ImgSvc10002,ParameterValue=$ImgSvc10002 --capabilities CAPABILITY_IAM --stack-name $CFSTACKNAME --region $AWSREGION
+## Setup Codecommit
+
+### a new repo
+1. create a new repo in codecommit
+2. create a IAM user for git user, add codecommitfull access for git push, pull....  https://docs.aws.amazon.com/codecommit/latest/userguide/setting-up-gc.html?icmpid=docs_acc_console_connect_np
+3. under IAM user, create Git Credentials , this is the login during the git clone
+
+### push a new version to repo
+1. git config --global credential.helper '!aws --profile HERE_YOUR_CLI_PROFILE_NAME codecommit credential-helper $@'
+2. git init
+3. git add *
+4. git commit -m "first commit"
+5. git remote add origin {git-url}
+6. git push -u origin master
+7. Login with the Git Credential
+
+## Setup Jenkins EC2
+
+1. Launch a t3 small ec2
+2. Associate a EIP to the EC2
+3. Security group - inbound 8080 port 0.0.0.0/0
+4. sudo yum update –y
+5. sudo yum install java
+6. sudo wget -O /etc/yum.repos.d/jenkins.repo http://pkg.jenkinsci.org/redhat/jenkins.repo
+7.  sudo rpm --import https://pkg.jenkins.io/redhat/jenkins.io.key
+8. sudo yum install jenkins -y
+9. sudo service jenkins start
+10. Visit to the Jenkins {EIP}:8080
+11. Follow the setup guide
+12. Install Plugins
+13. CloudBees Docker Build and Publish plugin, Slack Notification Plugin
+14. sudo yum install git -y
+15. sudo amazon-linux-extras install docker
+16. sudo usermod -a -G docker ec2-user
+17. sudo usermod -a -G docker jenkins
+18. sudo service jenkins restart
+
+## Setup Jenkins project
+### API
+1. New project, freestyle
+2. Source Code Management , set the repo url and credential
+3. Build step 1, docker image build push throght "Docker build and push plugin"
+4. Build step 2, deployment. update the ecs task definition with the latest built docker image. update through cloudformation.
+
